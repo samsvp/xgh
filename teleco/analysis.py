@@ -38,6 +38,20 @@ for state in data:
             tv = data[state][county][i][0]
             tvs[state][tv] = tvs[state].get(tv, 0) + data[state][county][i][1]
 
+# %%
+# Get states with only DTH tech
+raw_dth_n = {}
+total_n = {}
+for state in data:
+    raw_dth_n[state] = 0
+    total_n[state] = 0
+    for county in data[state]:
+        total_n[state] += 1
+        techs = [d[0] for d in data[state][county] if d[0] in technologies]
+        if len(techs) == 1 and techs[0] == "DTH": raw_dth_n[state] += 1
+
+
+
 #%%
 tvs_list = list(set([v for dct in tvs.values() for v in dct]))
 tvs_state = {}
