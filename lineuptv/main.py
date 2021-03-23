@@ -72,10 +72,14 @@ def scrape_cities(soup: BeautifulSoup) -> Dict[str, Dict[str, Dict[str, str]]]:
 
 
 def main():
+    # get all links
     soup = get_page(url)
     states_cities_district = scrape_cities(soup)
     save_cities(states_cities_district)
 
+    # get channels and resources from link
+    x = get_channels_tables("https://lineup.tv.br/cidade.php?idC=62")
+    y = get_channels_resources(x)
 
 if __name__ == "__main__":
     main()
