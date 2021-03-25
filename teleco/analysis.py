@@ -7,6 +7,7 @@ technologies = ["TVC", "DTH", "FTTH"]
 with open("teleco_full_data.json", encoding='utf-8') as f:
     data = json.load(f)
 
+# %%
 with open("municipios.txt", "w", encoding="utf-8") as f:
     for state in data:
         for county in data[state]:
@@ -33,10 +34,10 @@ for state in data:
         for i in range(len(data[state][county])):
             if data[state][county][i][0] in technologies:
                 tech = data[state][county][i][0]
-                techs[state][tech] = techs[state].get(tech, 0) + data[state][county][i][1]
+                techs[state][tech] = techs[state].get(tech, 0) + int(data[state][county][i][1].replace(".",""))
                 continue
             tv = data[state][county][i][0]
-            tvs[state][tv] = tvs[state].get(tv, 0) + data[state][county][i][1]
+            tvs[state][tv] = tvs[state].get(tv, 0) + int(data[state][county][i][1].replace(".",""))
 
 # %%
 # Get states with only DTH tech
