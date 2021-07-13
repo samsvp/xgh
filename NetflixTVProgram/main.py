@@ -1,7 +1,9 @@
+# %%
 import os
 import time
 import json
 
+from check_internet import check_internet
 from typing import Dict
 
 
@@ -24,6 +26,24 @@ def time_to_seconds(mtime) -> int:
     return hours * 60 ** 2 + minutes * 60 + seconds
 
 
+def wait_to_finish(duration: int, interet=True, duration_offset=2) -> None:
+    """
+    Counts down to wait for the current movie/series to finish.
+    params:
+    duration: duration of the movie in seconds
+    internet: check for internet connection access
+    duration_offset: amount in seconds to be added to the movie duration
+    """
+    time_passed = 0
+    while time_passed < duration + duration_offset:
+        loop_begin = time.time()
+        time.sleep(1)
+
+        # we don't have internet, stop counting down
+        if interet and not check_internet(): continue
+        else: time_passed += time.time() - loop_begin
+
+
 def main() -> None:
     channels = read_channels()
     while True:
@@ -37,5 +57,7 @@ def main() -> None:
         break
 
 
+# %%
 if __name__ == '__main__':
     main()
+# %%
