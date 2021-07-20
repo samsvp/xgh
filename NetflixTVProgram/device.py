@@ -16,14 +16,15 @@ class Device(threading.Thread):
     num_threads = 0
  
     app_to_json = {
-        "Netflix": "channels.json",
-        "Amazon": "amazon_channels.json",
+        "Amazon": "channels/amazon_channels.json",
+        "Globo": "channels/globo_channels.json",
+        "Netflix": "channels/netflix_channels.json",
     }
 
     app_names = {
-        "Netflix": "netflix",
-        "Globo": "globo",
         "Amazon": "amazon.avod",
+        "Globo": "globo",
+        "Netflix": "netflix",
         "Youtube": "youtube"
     }
 
