@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import itertools
 import threading
 import subprocess
 from collections import deque
@@ -51,6 +52,7 @@ class Device(threading.Thread):
         self.channel = ""
         self.log_max_length = 100 # max amount of text to log
         self.log = deque([])
+        self.sleep_timer = 1
 
 
     def run(self) -> None:
@@ -70,6 +72,7 @@ class Device(threading.Thread):
         Kills thread
         """
         self._running = False
+        self._update_log(f"Thread {self.threadID} killed")
 
 
     def update(self) -> None:
@@ -162,6 +165,13 @@ class Device(threading.Thread):
         return self.log
 
 
+    def print_log(self, n=5) -> None:
+        """
+        Prints the last n lines of log
+        """
+        print("\n".join(itertools.islice(self.log, len(self.log) - n, len(self.log))))
+
+
     def wait_to_finish(self, duration: int, duration_offset=2) -> None:
         """
         Counts down to wait for the current movie/series to finish.
@@ -172,7 +182,7 @@ class Device(threading.Thread):
         """
         while self.time_passed < duration + duration_offset:
             loop_begin = time.time()
-            time.sleep(1)
+            time.sleep(self.sleep_timer)
 
             # device disconnected
             if not self.is_connected():
