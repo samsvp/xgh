@@ -1,0 +1,1 @@
+{ "Rx Bytes": 235850536, "Tx Bytes": 32145639, "Total Bytes": 267996175 }

@@ -11,6 +11,7 @@ PORT = 9002        # Port to listen on (non-privileged ports are > 1023)
 ACK = bytearray([1])
 
 def server():
+    print("Server started. Press esc to quit")
     while True:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((HOST, PORT))
@@ -24,6 +25,8 @@ def server():
                     if not data:
                         break
                     conn.sendall(ACK)
+                    with open(f"{addr[0]}.txt", "wb") as f:
+                        f.write(data)
 
 
 def on_press(key):

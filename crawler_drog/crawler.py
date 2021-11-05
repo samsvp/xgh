@@ -1,4 +1,5 @@
 #%%
+import os
 import json
 import requests
 from xml.etree import ElementTree
@@ -6,42 +7,33 @@ from bs4 import BeautifulSoup
 from typing import Any, Dict, List, Tuple
 import multiprocessing
 
+import utils
+import config
 
-lock = multiprocessing.Lock()
+history = {}
 
-def find_by_key(data: Dict[Any, Any], target: Any) -> Any:
-    """
-    Finds the target key given a nested dictionary
-    """
-    for key, value in data.items():
-        if key == target:
-            yield value
-        if isinstance(value, dict):
-            yield from find_by_key(value, target)
-        elif isinstance(value, list):
-            for v in value:
-                if isinstance(v, dict):
-                    yield from find_by_key(v, target)
-
-
-def price_to_num(price: str) -> float:
-    """
-    Converts a price string (format-> "R$ 5.555,99") into a float
-    """
-    return float(price[3:].replace(".","").replace(",","."))
+xmls = ()
+dates = ()
+data = {}
 
 
 def get_xmls(url: str) -> Tuple[Tuple[str], Tuple[str]]:
+    """
+    Get sitemap xml
+    """
     response = requests.get(url)
     root = ElementTree.fromstring(response.content)
 
     xmls, dates = zip(*[(child[0].text, child[1].text) 
             for child in root if "product" in child[0].text
-        ])
+        ]) # filter the products xml
     return xmls, dates
 
 
-def get_products_list(xmls: List[str]) -> List[List[str]]:
+def get_products_list(xmls: List[str]) -> List[List[Tuple[str, str]]]:
+    """
+    Gets the list of products to crawl
+    """
     prods_list = []
     for i, xml in enumerate(xmls):
         response = requests.get(xml)
@@ -52,52 +44,90 @@ def get_products_list(xmls: List[str]) -> List[List[str]]:
     return prods_list
 
 
-def get_prices(soup: BeautifulSoup):
-    # the prices are stored inside the script tags as a json
+def get_product_data(soup: BeautifulSoup, key: str) -> Dict[str, Any]:
+    """
+    Product data is stored in jsons inside script tags.
+    This finds the script tag with the given key
+    and returns the desired product info as a dict
+    """
+    product_data = {}
+
     script = next((s for s in soup.find_all("script") 
-                    if s.string and "fullSellingPrice" in s.string), None)
-    # start and end of json
-    start, end = script.string.find("{"), script.string.rfind("}") + 1
-    script_content = script.string[start:end]
-    # json string to dict
-    m_dict = json.loads(script_content)
-    
-    # finally get prices and format it to flot
-    _price = find_by_key(m_dict, "fullSellingPrice").__next__()
-    _list_price = find_by_key(m_dict, "listPriceFormated").__next__()
-    price, list_price = price_to_num(_price), price_to_num(_list_price)
+                    if s.string and key in s.string), None)
+    if script:
+        # start and end of json
+        start, end = script.string.find("{"), script.string.rfind("}") + 1
+        script_content = script.string[start:end]
+        # json string to dict
+        product_data = json.loads(script_content)
+
+    return product_data
+
+
+def get_prices(soup: BeautifulSoup) -> Tuple[float, float]:
+    """
+    Get the price of the product
+    """
+    # the prices are stored inside the script tags as a json
+    price, list_price = 0, 0
+    product_data = get_product_data(soup, "fullSellingPrice")
+    if product_data:
+        # finally get prices and format it to flot
+        # if the product is not available a big number is returned
+        _price = utils.find_by_key(product_data, "fullSellingPrice").__next__()
+        _list_price = utils.find_by_key(product_data, "listPriceFormated").__next__()
+        price, list_price = utils.price_to_num(_price), utils.price_to_num(_list_price)
     
     return price, list_price
 
 
 def get_gtin(soup: BeautifulSoup) -> int:
-    if s:= (soup.find("meta", itemprop="ean") or 
-            soup.find("meta", itemprop="gtin13")):
-        return int(s["content"])
+    """
+    Gets the grin
+    """
+    ean = None
+
+    product_data = get_product_data(soup, "productEans")
+    if product_data:
+        eans = utils.find_by_key(product_data, "productEans").__next__()
+        if eans: ean = int(eans[0])
+    
+    return ean
     
 
-def load_json() -> Dict[Any, Any]:
+def load_json(filename: str) -> Dict[Any, Any]:
+    """
+    Loads a json with the given file name.
+    If no file is found then an empty dict is returned.
+    """
     try:
-        with open("data.json", "r", encoding='utf-8') as f:
+        with open(filename, "r", encoding='utf-8') as f:
             history = json.load(f)
     except FileNotFoundError:
         history = {}
     return history
 
 
-def update_json(data: Dict[Any, Any], i: str) -> Dict[Any, Any]:
-    lock.acquire()
-
+def load_json_tmp(pid: int) -> Dict[Any, Any]:
     try:
-        history = load_json()
+        with open(f"data_{pid}.json.tmp", "r", encoding='utf-8') as f:
+            history = json.load(f)
+    except FileNotFoundError:
+        history = {}
+    return history
+
+
+def update_json(data: Dict[Any, Any], i: str, pid: int) -> Dict[Any, Any]:
+    history = load_json()
+    try:
         if i in history: history[i].update(data)
         else: history[i] = data
 
-        with open("data.json", "w", encoding='utf-8') as data_file:
+        with open(f"data_{pid}.json.tmp", "w", encoding='utf-8') as data_file:
             json.dump(history, data_file, indent=True)
-    finally:
-        lock.release()    
-    
+    except Exception as e:
+        print(e)
+
     return history
 
 def check_data(prods_list: Tuple[int, List[str]]) -> None:
@@ -112,7 +142,12 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
         if str(i) in history and date == history[str(i)].get(prod, {}).get("last_mod", None):
             continue
 
-        response = requests.get(prod)
+        try:
+            response = requests.get(prod)
+        except Exception as e:
+            print(e)
+            continue
+        
         soup = BeautifulSoup(response.content, "lxml")
 
         # get gtin and prices
@@ -127,20 +162,37 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
             "last_mod": date, "GTIN": gtin
         }
         data["last_mod"] = date
-        history = update_json(data, str(i))
+        history = update_json(data, str(i), multiprocessing.current_process().pid)
         
         print(f"{prod} has been processed")
 
 
-url = "https://www.drogariavenancio.com.br/sitemap.xml"
-history = load_json() 
-
-xmls, dates = get_xmls(url)
-data = {}
-
 if __name__ == "__main__":
-    m_prods_list = get_products_list(xmls)
+    for name in config.selected_names:
+        url = config.urls[name]
+        filename = f"{name}_data.json"
+        
+        history = load_json(filename)
+        xmls, dates = get_xmls(url)
 
-    with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
-        p.map(check_data, list(enumerate(m_prods_list)))
-    
+        m_prods_list = get_products_list(xmls)
+
+        with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+            p.map(check_data, list(enumerate(m_prods_list)))
+        
+        # temp file names
+        tmp_jsons_names = [f for f in os.listdir() if f.endswith(".tmp")]
+
+        # merge all data
+        all_data = {}
+        for tmp in tmp_jsons_names:
+            with open(tmp, "r") as file:
+                m_data = (json.load(file))
+            all_data.update(m_data)
+
+        with open(filename, "w") as f:
+            json.dump(all_data, f)
+
+        # remove temp files
+        for tmp in tmp_jsons_names: os.remove(tmp)
+
