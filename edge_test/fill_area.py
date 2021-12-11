@@ -53,8 +53,7 @@ def area_outside(img: np.ndarray, cx: int, cy: int, r: int) -> int:
     return np.sum(circle | img) - AREA
 
 
-
-image = load_bin_image("../Reserva_preto.jpg", True)
+image = load_bin_image("Reserva_preto.jpg", True)
 circle_mask = mcircle_mask(image)
 
 R = np.array([8, 16, 24, 32, 48, 64], dtype=np.int16) # circle radius
@@ -177,6 +176,7 @@ plt.show()
 
 # %%
 # optimize circles
+n_picked_centers = picked_centers
 for i in range(50):
     m = np.argmax(c_costs)
     _n_picked_centers, changed = minimize_circle_loss(
@@ -285,6 +285,17 @@ img_gray = cv2.cvtColor(flower, cv2.COLOR_BGR2GRAY)
 labeled_filter = filter_label(flower, labeled_img, 1)
 plt.imshow(labeled_filter)
 # %%
+def overlay(_img1: np.ndarray, img2: np.ndarray) -> np.ndarray:
+    """
+    Overlays img2 into img1
+    """
+    img1 = _img1.copy() if _img1.shape == img2.shape \
+        else _img1.reshape(img2.shape)
+
+    mask = img2[:,:,-1] >= 200
+    img1[mask] = img2[mask]
+    return img1
+
 # resize image
 flower_images = {}
 
@@ -295,10 +306,16 @@ for r in R:
 
 # create new image
 synthetic_img = np.zeros((*image.shape, 4), dtype=np.uint8)
+n_picked_centers.sort(key=lambda c: c[-1])
 for center in n_picked_centers:
     x, y, r = center
     flower_img = flower_images[r]
     mask = rec_mask(image, x, y, (2*r)+1)
-    synthetic_img[mask] = flower_img.reshape(-1,4)
+
+    overlayed = overlay(synthetic_img[mask], flower_img)
+    synthetic_img[mask] = overlayed.reshape(-1,4)
 
 plt.imshow(synthetic_img)
+
+
+# %%
