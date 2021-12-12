@@ -3,6 +3,7 @@ import cv2
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from functools import lru_cache
 
 from typing import Callable, List, Tuple
 
@@ -27,6 +28,7 @@ def mcircle_mask(image: np.ndarray) -> Callable:
     x = np.arange(image.shape[0]).reshape(1,-1)
     y = np.arange(image.shape[1]).reshape(-1,1)
     img_shape = image.shape
+    @lru_cache(maxsize=1024)
     def _circle_mask(cx: int, cy: int, r: int) -> np.ndarray:
         mask = (x - cx) ** 2 + (y - cy) ** 2 <= r ** 2
         circle = np.zeros(img_shape, dtype=np.int8)
@@ -204,6 +206,7 @@ plt.show()
 from skimage.feature import canny
 from skimage.filters import sobel
 from scipy import ndimage as ndi
+from scipy.ndimage.interpolation import rotate
 from skimage.segmentation import watershed
 
 
@@ -271,19 +274,44 @@ def filter_label(_img: np.ndarray, _img_labels: np.ndarray,
     # return the mask as alpha channel
     return np.append(img, img_labels[:,:,None], axis=-1).astype(np.uint8)
 
+flowers_path = ["flower.jpeg", "flower_pink.jpeg",
+    "flower2.jpeg"]
+edges_params = [(30, 150), (30, 150), (30, 200)]
+grays = [0, 1, 1]
+blurs = [0, 0, 1]
+filter_idx = [1, 2, 1]
 
-_flower = cv2.imread("flower.jpeg")
-flower = cv2.cvtColor(_flower, cv2.COLOR_BGR2RGB)
-seg, labeled_img = get_segmentation(flower, 30, 150, True)
-plt.imshow(flower)
-plt.show()
-plt.imshow(labeled_img)
-plt.show()
 
-# check if we filtered the image
-img_gray = cv2.cvtColor(flower, cv2.COLOR_BGR2GRAY)
-labeled_filter = filter_label(flower, labeled_img, 1)
-plt.imshow(labeled_filter)
+flowers = []
+for i, flower_path in enumerate(flowers_path):
+    gray = grays[i]
+    blur = blurs[i]
+    edge_params = edges_params[i]
+
+    _flower = cv2.imread(flower_path)
+    if blur:
+        _flower = cv2.GaussianBlur(_flower, (5,5), 0)
+
+    flower = cv2.cvtColor(_flower, cv2.COLOR_BGR2RGB)
+    seg_img = cv2.cvtColor(_flower, 
+        cv2.COLOR_BGR2GRAY if gray else cv2.COLOR_BGR2RGB)
+    seg, labeled_img = get_segmentation(seg_img, *edge_params, True)
+    flowers.append((flower, labeled_img))
+
+    plt.imshow(flower)
+    plt.show()
+    plt.imshow(labeled_img)
+    plt.show()
+
+labeled_filters = [filter_label(flower, labeled_img, filter_idx[i]) 
+    for i, (flower, labeled_img) in enumerate(flowers)]
+
+# check if we filtered the images
+for labeled_filter in labeled_filters:
+    plt.imshow(labeled_filter)
+    plt.show()
+
+
 # %%
 def overlay(_img1: np.ndarray, img2: np.ndarray) -> np.ndarray:
     """
@@ -298,24 +326,32 @@ def overlay(_img1: np.ndarray, img2: np.ndarray) -> np.ndarray:
 
 # resize image
 flower_images = {}
+scale = 2
 
 for r in R:
-    h = 4*r
-    w = 4*r
-    flower_images[r] = cv2.resize(labeled_filter, (w+1, h+1))
+    h = int(2*scale*r)
+    w = int(2*scale*r)
+    flower_images[r] = [
+        cv2.resize(labeled_filter, (w+1, h+1))
+        for labeled_filter in labeled_filters
+    ]
 
 # create new image
+should_rotate = True
 synthetic_img = np.zeros((*image.shape, 4), dtype=np.uint8)
 n_picked_centers.sort(key=lambda c: c[-1])
 for center in n_picked_centers:
     x, y, r = center
-    flower_img = flower_images[r]
-    mask = rec_mask(image, x, y, (2*r)+1)
+    angle = np.random.randint(360) if should_rotate else 0
+    flower_img = random.choice(flower_images[r])
+    flower_img = rotate(flower_img, angle=angle, reshape=False)
+    mask = rec_mask(image, x, y, int(scale*r)+1)
 
     overlayed = overlay(synthetic_img[mask], flower_img)
     synthetic_img[mask] = overlayed.reshape(-1,4)
 
 plt.imshow(synthetic_img)
 
-
+# %%
+cv2.imwrite("out.png", synthetic_img)
 # %%
