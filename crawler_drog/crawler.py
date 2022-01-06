@@ -118,12 +118,13 @@ def load_json_tmp(pid: int) -> Dict[Any, Any]:
 
 
 def update_json(data: Dict[Any, Any], i: str, pid: int) -> Dict[Any, Any]:
-    history = load_json()
+    filename = f"data_{pid}.json.tmp"
+    history = load_json(filename)
     try:
         if i in history: history[i].update(data)
         else: history[i] = data
 
-        with open(f"data_{pid}.json.tmp", "w", encoding='utf-8') as data_file:
+        with open(filename, "w", encoding='utf-8') as data_file:
             json.dump(history, data_file, indent=True)
     except Exception as e:
         print(e)
