@@ -1,6 +1,6 @@
 {
-    "boot_url":"",
+    "boot_url":"https://github.com/samsvp/xgh/blob/main/config/an_boot.json",
     "targets": {
-        
+        "b2c4b52b-bb91-471d-85d7-0ed563b0f876" : "https://github.com/samsvp/xgh/blob/main/config/an_boot.json"
     }
 }
