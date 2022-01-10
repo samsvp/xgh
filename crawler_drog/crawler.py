@@ -16,6 +16,7 @@ xmls = ()
 dates = ()
 data = {}
 
+filename = ""
 
 def get_xmls(url: str) -> Tuple[Tuple[str], Tuple[str]]:
     """
@@ -81,7 +82,7 @@ def get_prices(soup: BeautifulSoup) -> Tuple[float, float]:
     return price, list_price
 
 
-def get_gtin(soup: BeautifulSoup) -> int:
+def get_gtin(soup: BeautifulSoup) -> str:
     """
     Gets the grin
     """
@@ -90,50 +91,17 @@ def get_gtin(soup: BeautifulSoup) -> int:
     product_data = get_product_data(soup, "productEans")
     if product_data:
         eans = utils.find_by_key(product_data, "productEans").__next__()
-        if eans: ean = int(eans[0])
+        if eans: ean = eans[0]
     
     return ean
-    
 
-def load_json(filename: str) -> Dict[Any, Any]:
-    """
-    Loads a json with the given file name.
-    If no file is found then an empty dict is returned.
-    """
-    try:
-        with open(filename, "r", encoding='utf-8') as f:
-            history = json.load(f)
-    except FileNotFoundError:
-        history = {}
-    return history
-
-
-def load_json_tmp(pid: int) -> Dict[Any, Any]:
-    try:
-        with open(f"data_{pid}.json.tmp", "r", encoding='utf-8') as f:
-            history = json.load(f)
-    except FileNotFoundError:
-        history = {}
-    return history
-
-
-def update_json(data: Dict[Any, Any], i: str, pid: int) -> Dict[Any, Any]:
-    history = load_json()
-    try:
-        if i in history: history[i].update(data)
-        else: history[i] = data
-
-        with open(f"data_{pid}.json.tmp", "w", encoding='utf-8') as data_file:
-            json.dump(history, data_file, indent=True)
-    except Exception as e:
-        print(e)
-
-    return history
 
 def check_data(prods_list: Tuple[int, List[str]]) -> None:
     global history, data
-    i, prods = prods_list
     
+    i, prods = prods_list
+    pid = multiprocessing.current_process().pid
+
     if str(i) in history:
         if dates[i] == history[str(i)].get("last_mod", ""):
             return
@@ -146,8 +114,10 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
             response = requests.get(prod)
         except Exception as e:
             print(e)
+            with open(f".errors_{pid}.txt", 'a+') as f:
+                f.write(f"{e}\n{'*' * 20}\n")
             continue
-        
+
         soup = BeautifulSoup(response.content, "lxml")
 
         # get gtin and prices
@@ -162,17 +132,18 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
             "last_mod": date, "GTIN": gtin
         }
         data["last_mod"] = date
-        history = update_json(data, str(i), multiprocessing.current_process().pid)
+        history = utils.update_json(data, str(i), pid, filename)
         
         print(f"{prod} has been processed")
 
 
 if __name__ == "__main__":
     for name in config.selected_names:
+        print(f"Processing {name}")
         url = config.urls[name]
         filename = f"{name}_data.json"
         
-        history = load_json(filename)
+        history = utils.load_json(filename)
         xmls, dates = get_xmls(url)
 
         m_prods_list = get_products_list(xmls)
@@ -180,6 +151,7 @@ if __name__ == "__main__":
         with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
             p.map(check_data, list(enumerate(m_prods_list)))
         
+        # merge files
         # temp file names
         tmp_jsons_names = [f for f in os.listdir() if f.endswith(".tmp")]
 
@@ -195,4 +167,18 @@ if __name__ == "__main__":
 
         # remove temp files
         for tmp in tmp_jsons_names: os.remove(tmp)
+
+        # check for errors
+        tmp_error_names = [f for f in os.listdir() if f.startswith(".errors")]
+        error_string = ""
+        
+        for tmp_error in tmp_error_names:
+            with open(tmp_error) as f:
+                error_string += f.read() + "\n"
+                
+        with open("errors.txt", "w") as f:
+            f.write(error_string)
+
+        for tmp in tmp_error_names: os.remove(tmp)
+        
 
