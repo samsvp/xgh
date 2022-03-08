@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Tuple
 import multiprocessing
 
 import utils
-import config
 
 history = {}
 
@@ -17,7 +16,8 @@ dates = ()
 data = {}
 
 
-def get_xmls(url: str) -> Tuple[Tuple[str], Tuple[str]]:
+def get_xmls(url: str, get_all=False) -> \
+        Tuple[Tuple[str], Tuple[str]]:
     """
     Get sitemap xml
     """
@@ -25,7 +25,8 @@ def get_xmls(url: str) -> Tuple[Tuple[str], Tuple[str]]:
     root = ElementTree.fromstring(response.content)
 
     xmls, dates = zip(*[(child[0].text, child[1].text) 
-            for child in root if "product" in child[0].text
+            for child in root 
+            if get_all or "product" in child[0].text
         ]) # filter the products xml
     return xmls, dates
 
@@ -64,12 +65,13 @@ def get_product_data(soup: BeautifulSoup, key: str) -> Dict[str, Any]:
     return product_data
 
 
+
 def get_prices(soup: BeautifulSoup) -> Tuple[float, float]:
     """
     Get the price of the product
     """
     # the prices are stored inside the script tags as a json
-    price, list_price = 0, 0
+    price, list_price = -1, -1
     product_data = get_product_data(soup, "fullSellingPrice")
     if product_data:
         # finally get prices and format it to flot
@@ -77,13 +79,22 @@ def get_prices(soup: BeautifulSoup) -> Tuple[float, float]:
         _price = utils.find_by_key(product_data, "fullSellingPrice").__next__()
         _list_price = utils.find_by_key(product_data, "listPriceFormated").__next__()
         price, list_price = utils.price_to_num(_price), utils.price_to_num(_list_price)
+
+        return price, list_price
+    
+    # try to find with another key
+    product_data = get_product_data(soup, "price")
+    if product_data:
+        _price = utils.find_by_key(product_data, "price").__next__()
+        price = float(_price)
+        list_price = price
     
     return price, list_price
 
 
 def get_gtin(soup: BeautifulSoup) -> int:
     """
-    Gets the grin
+    Gets the gtin
     """
     ean = None
 
@@ -95,6 +106,17 @@ def get_gtin(soup: BeautifulSoup) -> int:
                 ean = int(eans[0])
             except ValueError:
                 ean = 0
+        return ean
+
+    # second case
+    product_data = get_product_data(soup, "gtin13")
+    if product_data:
+        eans = utils.find_by_key(product_data, "gtin13").__next__()
+        try:
+            ean = int(eans)
+        except ValueError:
+            ean = -1
+        return ean
     
     return ean
     
@@ -135,6 +157,7 @@ def update_json(data: Dict[Any, Any], i: str, pid: int) -> Dict[Any, Any]:
 
     return history
 
+
 def check_data(prods_list: Tuple[int, List[str]]) -> None:
     global history, data
     i, prods = prods_list
@@ -159,6 +182,10 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
         gtin = get_gtin(soup)
         price, list_price = get_prices(soup)
 
+        # failure cases
+        if gtin is None: continue
+        if gtin == -1 and price == -1: continue
+
         data[prod] = {
             "price": price, "list_price": list_price,
             # when list_price is not 0 the product is on sale
@@ -173,14 +200,22 @@ def check_data(prods_list: Tuple[int, List[str]]) -> None:
 
 
 if __name__ == "__main__":
+    import config
+
     for name in config.selected_names:
         url = config.urls[name]
         filename = f"{name}_data.json"
         
         history = load_json(filename)
-        xmls, dates = get_xmls(url)
 
-        m_prods_list = get_products_list(xmls)
+        try:
+            xmls, dates = get_xmls(url)
+            m_prods_list = get_products_list(xmls)
+        except Exception:
+            _site, dates = get_xmls(url, True)
+            _plist = list(zip(_site, dates))
+            step = len(_plist) // 16
+            m_prods_list = [_plist[x:x+step] for x in range(0, len(_plist), step)]
 
         with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
             p.map(check_data, list(enumerate(m_prods_list)))

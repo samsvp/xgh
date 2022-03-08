@@ -8,7 +8,8 @@ parser = argparse.ArgumentParser(description='Configuration for crawling')
 urls = {
     "venancio": "https://www.drogariavenancio.com.br/sitemap.xml",
     "indiana": "https://www.farmaciaindiana.com.br/sitemap.xml",
-    "pacheco": "https://www.drogariaspacheco.com.br/sitemap.xml"
+    "pacheco": "https://www.drogariaspacheco.com.br/sitemap.xml",
+    "raia": "https://img.drogaraia.com.br/sitemap/2/sitemap.xml"
 }
 
 parser.add_argument('-c', '--crawl_all', dest="crawl_all",

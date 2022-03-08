@@ -22,3 +22,14 @@ gtin = get_gtin(soup)
 prices = get_prices(soup)
 print(gtin, prices)
 # %%
+prod = "https://www.drogaraia.com.br/kit-ampola-alfaparf-semi-di-lino-moisture-nutritive-essential-oil-03x13ml-75214.html"
+response = requests.get(prod)
+soup = BeautifulSoup(response.content, "lxml")
+gtin = get_gtin(soup)
+prices = get_prices(soup)
+print(gtin, prices)
+# %%
+target_url = "https://img.drogaraia.com.br/sitemap/2/sitemap.xml"
+
+xmls, dates = get_xmls(target_url, True)
+# %%
