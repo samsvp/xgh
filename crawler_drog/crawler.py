@@ -60,7 +60,10 @@ def get_product_data(soup: BeautifulSoup, key: str) -> Dict[str, Any]:
         start, end = script.string.find("{"), script.string.rfind("}") + 1
         script_content = script.string[start:end]
         # json string to dict
-        product_data = json.loads(script_content)
+        try:
+            product_data = json.loads(script_content)
+        except:
+            pass
 
     return product_data
 
