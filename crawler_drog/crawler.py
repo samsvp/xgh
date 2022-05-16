@@ -220,7 +220,7 @@ if __name__ == "__main__":
             step = len(_plist) // 16
             m_prods_list = [_plist[x:x+step] for x in range(0, len(_plist), step)]
 
-        with multiprocessing.Pool(multiprocessing.cpu_count()) as p:
+        with multiprocessing.Pool(multiprocessing.cpu_count() * 4) as p:
             p.map(check_data, list(enumerate(m_prods_list)))
         
         # temp file names
