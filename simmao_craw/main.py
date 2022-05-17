@@ -110,3 +110,10 @@ for i in range(len(get_target_elements(driver))):
     
     sleep(1)
 # %%
+import pickle
+with open("hist.pickle", "wb") as f:
+    pickle.dump(history, f)
+# %%
+with open("hist.pickle", "rb") as f:
+    pickle.load(f)
+# %%
