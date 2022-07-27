@@ -1,3 +1,4 @@
+*.json
 oi_boletos/pdfs
 
 # Byte-compiled / optimized / DLL files
