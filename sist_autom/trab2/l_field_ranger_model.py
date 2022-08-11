@@ -1,17 +1,26 @@
 #%%
+import random
 import numpy as np
-import matplotlib. pyplot as plt
+import matplotlib.pyplot as plt
 
 
-def plot_map(m, robot_pos, size):
+def plot_map(m, robot_pos, size, title):
     map = np.zeros(size)
     for x in m:
         map[x[1], x[0]] = 1
 
     map[robot_pos[1], robot_pos[0]] = 2
 
+    plt.title(title)
     plt.imshow(map)
+    x, y, theta = robot_pos
+    plt.plot([x, x + 0.5 * np.cos(theta)],
+            [y, y + 0.5 * np.sin(theta)])
 
+
+def sample(b):
+    return b / 6 * np.sum(
+        [random.uniform(-1,1) for i in range(12)])
 
 
 def prob(x, sigma_squared):
@@ -72,10 +81,29 @@ def landmark_known_corr(ft, ct, xt, sigma_squared):
     return q
 
 
+def sample_landmark_known_corr(ft, ct, 
+        sigmar_squared, sigmap_squared):
+    """
+    Samples robot poses for a given landmark measurement ft.
+    Parameters
+    ft: vector of observed feature
+    ct: true feature corresponding to ft
+    sigma_squared: prob variance
+    """
+    rt, phit, st = ft
+    xc, yc, sc = ct
+    
+    gamma_hat = np.random.rand() * 2 * np.pi
+    r_hat = rt + sample(sigmar_squared)
+    phi_hat = phit + sample(sigmap_squared)
+    x = xc + r_hat * np.cos(gamma_hat)
+    y = yc + r_hat * np.sin(gamma_hat)
+    theta = gamma_hat - np.pi - phi_hat
+    
+    return np.array([x, y, theta])
+
 # %%
 if __name__ == "__main__":
-    zt = np.array([2, 2, 2, 3, 2])
-
     # theta = 0 is looking to the left
     xt = [0, 0, np.pi / 2]
     xt_sensor = np.array([[0.1, 0.1, 0], [0.1, 0.1, 0],
@@ -84,12 +112,61 @@ if __name__ == "__main__":
     m = np.array([[0, 2], [3, 3], [2, 1]])
     sigma_squared = 0.5
 
-    plot_map(m, xt, (10,10))
-
     z_hit = 0.6
     z_rand = 0.2
     z_max = 0.2
 
-    print(lfield_ranger_model(zt, xt, xt_sensor, m, 
-        sigma_squared, z_hit, z_rand, z_max))
+    zt = np.array([2, 2, 2, 3, 2])
+    for i, xt in enumerate([[0, 0, np.pi / 2], 
+               [0, 0, np.pi / 4],
+               [0, 0, 0],
+               [0, 0, -np.pi / 4],
+               [0, 0, -np.pi / 2]]):
+        p = lfield_ranger_model(zt, xt, xt_sensor, m, 
+            sigma_squared, z_hit, z_rand, z_max)
+        plot_map(m, xt, (10,10), f"Likelihood: {p}")
+        plt.savefig(f"alg_3_{i}.png")
+        plt.show()
+    
+    
+    # theta = 0 is looking to the left
+    xt_sensor = np.array([[0.1, 0.1, 0], [0.1, 0.1, 0],
+        [0.1, 0.1, 0], [0.1, 0.1, 0], [0.1, 0.1, 0]])
+
+    m = np.array([[0, 2], [3, 3], [2, 1]])
+    sigma_squared = 0.5
+
+    z_hit = 0.6
+    z_rand = 0.2
+    z_max = 0.2
+    zt = np.array([1, 1, 1, 1, 1])
+    for i, xt in enumerate([[1, 1, np.pi / 2], 
+               [1, 1, np.pi / 4],
+               [1, 1, 0],
+               [1, 1, -np.pi / 4],
+               [1, 1, -np.pi / 2]]):
+        p = lfield_ranger_model(zt, xt, xt_sensor, m, 
+            sigma_squared, z_hit, z_rand, z_max)
+        plot_map(m, xt, (10,10), f"Likelihood: {p}")
+        plt.savefig(f"alg_3_1{i}.png")
+        plt.show()
+# %%
+    ft = [1, np.pi / 2, 0]
+    ct = [1, 1, 0]
+    points = np.array(
+        [sample_landmark_known_corr(ft, ct, 0.5, 0.5) 
+         for _ in range(1000)])
+    
+    # plot the positions
+    plt.figure(figsize=(8, 6), dpi=80)
+    plt.scatter(points[:,0], points[:,1], s=2.5)
+    # plot the orientations
+    for point in points:
+        x, y, theta = point
+        plt.plot([x, x + 0.05 * np.cos(theta)], 
+            [y, y + 0.05 * np.sin(theta)])
+    plt.title("Sample distribution generated from f = [1, 1.57,0]")
+    plt.savefig("alg_5.png")
+    plt.show()
+
 # %%

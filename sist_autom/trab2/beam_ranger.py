@@ -78,25 +78,35 @@ if __name__ == "__main__":
     sigma = 2.0
 
     p_h = p_hit(zt, zt_star, sigma, z_max)
-    plt.plot(p_h)
+    plt.plot(zt, p_h)
+    plt.title("p_hit")
+    plt.savefig("alg1_p_hit.png")
     plt.show()
 
     lmbda = .5
     p_s = p_short(zt, zt_star, lmbda)
-    plt.plot(p_s)
+    plt.title("p_short")
+    plt.plot(zt, p_s)
+    plt.savefig("alg1_p_short.png")
     plt.show()
 
     p_m = p_max(zt, z_max)
-    plt.plot(p_m)
+    plt.plot(zt, p_m)
+    plt.title("p_max")
+    plt.savefig("alg1_p_max.png")
     plt.show()
 
     p_r = p_rand(zt, z_max)
-    plt.plot(p_r)
+    plt.plot(zt, p_r)
+    plt.title("p_random")
+    plt.savefig("alg1_p_random.png")
     plt.show()
 
     p = 0.5 * p_h + 0.2 * p_s + 0.2 * p_m + 0.1 * p_r
     p /= p.sum()
-    plt.plot(p)
+    plt.plot(zt, p)
+    plt.title("p = p_hit + p_short + p_random + p_max")
+    plt.savefig("alg1_p.png")
     plt.show()
 
 
@@ -104,6 +114,9 @@ if __name__ == "__main__":
     zt = np.arange(0, z_max+0.1, 0.1)
     pi = [zt[sample_p(p, _r)] for _r in r]
     plt.hist(pi, bins=100)
+    plt.title("Sample distribution")
+    plt.savefig("alg1_sample.png")
+    plt.show()
 
 
 #%%
@@ -149,9 +162,14 @@ if __name__ == "__main__":
     p /= p.sum()
 
     pi2 = [zt[sample_p(p, _r)] for _r in r]
-    plt.hist(pi, bins=100, alpha=0.5)
-    plt.hist(pi2, bins=100, alpha=0.5)
-
+    weights = np.ones_like(pi2) / len(pi2)
+    plt.figure(figsize=(8, 6), dpi=80)
+    plt.hist(pi2, bins=len(p)-1, weights=weights)
+    #plt.hist(pi, bins=len(p), alpha=0.5, weights=weights)
+    plt.title("Parameter approximation using EM")
+    plt.plot(zt, p)
+    plt.savefig("alg2.png")
+    plt.show()
 
 #%%
     import pandas as pd
