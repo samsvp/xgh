@@ -28,7 +28,7 @@ def p_short(zt: np.ndarray, zt_star: np.ndarray,
     return p
 
 
-def p_max(zt: np.ndarray, z_max: float, tol=0.01) -> np.ndarray:
+def p_max(zt: np.ndarray, z_max: float, tol=0.001) -> np.ndarray:
     return np.isclose(zt, z_max, tol).astype(float)
 
 
@@ -37,7 +37,6 @@ def p_rand(zt: np.ndarray, z_max: float) -> np.ndarray:
     p[zt > z_max] = 0
     p[zt < 0] = 0
     return p
-
 
 
 def beam_ranger_finder(zt: np.ndarray, zt_star: np.ndarray, 
@@ -66,16 +65,15 @@ def sample_p(p: np.ndarray, x: float):
     return p.shape[0] - 1
 
 
-
 # %%
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    z_max = 30
+    z_max = 10
     step = 0.1
     zt = np.arange(0, z_max + step, step)
-    zt_star = 15
-    sigma = 2.0
+    zt_star = 5
+    sigma = 1.0
 
     p_h = p_hit(zt, zt_star, sigma, z_max)
     plt.plot(zt, p_h)
@@ -119,9 +117,7 @@ if __name__ == "__main__":
     plt.show()
 
 
-#%%
-
-
+    #%%
     def learn_params(Z: np.ndarray, Z_star: np.ndarray, z_max: float):
         sigma = 1.0
         lmbda = 1.0
@@ -171,7 +167,7 @@ if __name__ == "__main__":
     plt.savefig("alg2.png")
     plt.show()
 
-#%%
+    #%%
     import pandas as pd
 
     df = pd.DataFrame({})
@@ -186,9 +182,9 @@ if __name__ == "__main__":
 
     df.to_csv("dataset2.csv")
 
-# %%
-#Calculate distance from the center of a box to the nearest
-#point given an angle theta 
+    # %%
+    #Calculate distance from the center of a box to the nearest
+    #point given an angle theta 
 
     size = np.array([50, 25])
     xi = size / 2
@@ -229,7 +225,7 @@ if __name__ == "__main__":
 
     dataset = np.array(dataset)
 
-# %%
+    # %%
     # sava dataframe
     import pandas as pd
 

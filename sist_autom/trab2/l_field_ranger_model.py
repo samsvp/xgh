@@ -124,7 +124,7 @@ if __name__ == "__main__":
                [0, 0, -np.pi / 2]]):
         p = lfield_ranger_model(zt, xt, xt_sensor, m, 
             sigma_squared, z_hit, z_rand, z_max)
-        plot_map(m, xt, (10,10), f"Likelihood: {p}")
+        plot_map(m, xt, (5,5), f"Likelihood: {p}")
         plt.savefig(f"alg_3_{i}.png")
         plt.show()
     
@@ -147,14 +147,14 @@ if __name__ == "__main__":
                [1, 1, -np.pi / 2]]):
         p = lfield_ranger_model(zt, xt, xt_sensor, m, 
             sigma_squared, z_hit, z_rand, z_max)
-        plot_map(m, xt, (10,10), f"Likelihood: {p}")
+        plot_map(m, xt, (5,5), f"Likelihood: {p}")
         plt.savefig(f"alg_3_1{i}.png")
         plt.show()
-# %%
-    ft = [1, np.pi / 2, 0]
+    # %%
+    ft = [1, 0, 0]
     ct = [1, 1, 0]
     points = np.array(
-        [sample_landmark_known_corr(ft, ct, 0.5, 0.5) 
+        [sample_landmark_known_corr(ft, ct, 0.5, 1.0) 
          for _ in range(1000)])
     
     # plot the positions
@@ -164,9 +164,20 @@ if __name__ == "__main__":
     for point in points:
         x, y, theta = point
         plt.plot([x, x + 0.05 * np.cos(theta)], 
-            [y, y + 0.05 * np.sin(theta)])
-    plt.title("Sample distribution generated from f = [1, 1.57,0]")
+            [y, y + 0.05 * np.sin(theta)], "b")
+    plt.title("Sample distribution generated from f = [1, 0,0]")
     plt.savefig("alg_5.png")
     plt.show()
 
+    # %%
+    ct = [2, 0, 0] 
+    xt = [1,1,-np.pi/4]
+    plot_map([ct], xt, (5,5), "")
+    plt.show()
+
+    for f in [[1, -0.79, 0],
+              [1, 0, 0],
+              [1, 0.79, 0],
+              [1, 1.54, 0]]:
+        print("f =",f,"->", landmark_known_corr(f, ct, xt, 0.1))
 # %%
