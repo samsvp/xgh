@@ -39,10 +39,10 @@ def cconfidence_ellipse(mean, cov, ax, n_std=3.0, facecolor='none', **kwargs):
     # Calculating the stdandard deviation of x from
     # the squareroot of the variance and multiplying
     # with the given number of standard deviations.
-    scale_x = 5.0 * np.sqrt(cov[0, 0]) * n_std
+    scale_x = np.sqrt(cov[0, 0]) * n_std
 
     # calculating the stdandard deviation of y ...
-    scale_y = 5.0 * np.sqrt(cov[1, 1]) * n_std
+    scale_y = np.sqrt(cov[1, 1]) * n_std
 
     mean_x, mean_y = mean
 

@@ -5,7 +5,7 @@ from scipy.linalg import sqrtm
 import conf_ellipse as ce
 
 
-def get_next_pos(mu_l, ut, dt):
+def get_next_pos(mu_l: np.ndarray, ut: np.ndarray, dt: float) -> np.ndarray:
     theta = mu_l[-1]
     vt, wt = ut
     mut = mu_l + np.array([
@@ -15,7 +15,7 @@ def get_next_pos(mu_l, ut, dt):
     return mut
 
 
-def get_z(pos: np.ndarray, cts) -> np.ndarray:
+def get_z(pos: np.ndarray, cts: np.ndarray) -> np.ndarray:
     z = []
     for ct in cts:
         q = (ct[0] - pos[0]) ** 2 + (ct[1] - pos[1]) ** 2
