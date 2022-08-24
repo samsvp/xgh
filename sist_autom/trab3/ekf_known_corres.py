@@ -293,7 +293,7 @@ for i in range(1, len(covs_u)):
     ce.cconfidence_ellipse(mean, covs_u[i], 
         ax_nstd, n_std=3, edgecolor='blue')
 ax_nstd.legend()
-
+plt.savefig("efk_posw.png")
 plt.show()
 
 plt.title("X-axis error")
@@ -301,6 +301,7 @@ plt.plot(true_poses[:,0] - ekf_poses[:,0], label="ekf")
 plt.plot(true_poses[:,0] - exp_poses[:,0], label="no ekf")
 plt.plot(true_poses[:,0] - ekf_unknown_poses[:,0], label="ekf unknown")
 plt.plot(true_poses[:,0] - true_poses[:,0], "b--")
+plt.savefig("efk_error_xw.png")
 plt.legend()
 
 plt.show()
@@ -309,11 +310,7 @@ plt.plot(true_poses[:,1] - ekf_poses[:,1], label="ekf")
 plt.plot(true_poses[:,1] - exp_poses[:,1], label="no ekf")
 plt.plot(true_poses[:,1] - ekf_unknown_poses[:,1], label="ekf unknown")
 plt.plot(true_poses[:,0] - true_poses[:,0], "b--")
+
+plt.savefig("efk_error_yw.png")
 plt.legend()
-# %%
-fig, ax_nstd = plt.subplots(figsize=(6, 6))
-ce.cconfidence_ellipse(ekf_poses[-1][:2], cov, ax_nstd,n_std=1, edgecolor='firebrick')
-ce.cconfidence_ellipse(ekf_poses[-1][:2], cov, ax_nstd, n_std=2,edgecolor='fuchsia')
-ce.cconfidence_ellipse(ekf_poses[-1][:2], cov, ax_nstd, n_std=3,edgecolor='blue')
-plt.plot(ekf_poses[-1][0], ekf_poses[-1][1])
 # %%

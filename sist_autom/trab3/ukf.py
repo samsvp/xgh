@@ -6,15 +6,13 @@ from numpy.linalg import inv as mat_inv
 import conf_ellipse as ce
 
 
-def get_fwd_propogation(vel, om, th, delta_t):
-    move_forward = np.zeros((3,1))
-    
-    ratio = vel/om
-    move_forward[0,0] = ( -ratio * np.sin(th) ) + \
-        ( ratio * np.sin(th + (om*delta_t)) )
-    move_forward[1,0] = ( ratio * np.cos(th) ) - \
-        ( ratio * np.cos(th + (om*delta_t)) )
-    move_forward[2,0] = om*delta_t
+def get_fwd_propogation(vt, wt, theta, dt):    
+    move_forward = np.array([
+        [-vt/wt * np.sin(theta) + vt/wt * np.sin(theta + (wt*dt))],
+        [vt/wt * np.cos(theta) - vt/wt * np.cos(theta + (wt*dt))],
+        [wt * dt]
+    ])
+
     return move_forward
 
 
@@ -24,20 +22,20 @@ def get_mu_t_a(state_vec):
     return mu_t_a
 
 
-def get_sigma_a(sig, m, q):
+def get_sigma_a(sigma, m, q):
     sig_a = np.zeros((7,7))
-    sig_a[0:3,0:3] = sig
+    sig_a[0:3,0:3] = sigma
     sig_a[3:5,3:5] = m
     sig_a[5: ,5: ] = q
     return sig_a
 
 
-def get_chi_a(augmented_mu, augmented_sig, g):
+def get_chi_a(mu_a, sigma_a, gamma):
     chi_a = np.zeros((7,15))
-    chi_a[:,0] = augmented_mu[:,0]
-    mat_sq_root = g * np.linalg.cholesky(augmented_sig)
-    chi_a[:,1:8] = augmented_mu + mat_sq_root
-    chi_a[:,8:] = augmented_mu - mat_sq_root
+    chi_a[:,0] = mu_a[:,0]
+    mat_sq_root = gamma * np.linalg.cholesky(sigma_a)
+    chi_a[:,1:8] = mu_a + mat_sq_root
+    chi_a[:,8:] = mu_a - mat_sq_root
     return chi_a
 
 
@@ -284,7 +282,7 @@ if __name__ == "__main__":
     # plot the states over time
     fig, ax_nstd = plt.subplots(figsize=(6, 6))
     ax_nstd.plot(x_pos_true, y_pos_true, label="true")
-    ax_nstd.plot(x_pos, y_pos, label="untrue")
+    ax_nstd.plot(x_pos, y_pos, label="no ukf")
     ax_nstd.plot(mu_x, mu_y, "o--", label="predicted")
     ax_nstd.legend()
 
@@ -297,20 +295,25 @@ if __name__ == "__main__":
         ce.cconfidence_ellipse(mean, sigmas[i], 
             ax_nstd, n_std=3, edgecolor='blue')
 
+    plt.savefig("ukf.png")
     plt.show()
 
     plt.title("X-axis error")
     plt.plot(x_pos_true - mu_x, label="ukf")
+    plt.plot(x_pos_true - x_pos, label="no ukf")
     plt.plot(x_pos_true - x_pos_true, "b--")
     plt.legend()
 
+    plt.savefig("ukf_error_x.png")
     plt.show()
 
 
     plt.title("Y-axis error")
     plt.plot(y_pos_true - mu_y, label="ukf")
+    plt.plot(y_pos_true - y_pos, label="no ukf")
     plt.plot(y_pos_true - y_pos_true, "b--")
     plt.legend()
 
+    plt.savefig("ukf_error_y.png")
     plt.show()
 # %%
