@@ -1,4 +1,5 @@
 #%%
+from functools import reduce
 import random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,23 +19,38 @@ def motion_model_vel(xt, ut, xtm1, dt):
     v, w = ut
     x, y, theta = xtm1
     x_line, y_line, theta_line = xt
-    mu = 0.5 * ((x - x_line) * np.cos(theta) + (y - y_line) * np.sin(theta)) \
-        / ((y - y_line) * np.cos(theta) - (x - x_line) * np.sin(theta))
+    if (y - y_line != 0 and x - x_line != 0):
+        mu = 0.5 * ((x - x_line) * np.cos(theta) + (y - y_line) * np.sin(theta)) \
+            / ((y - y_line) * np.cos(theta) - (x - x_line) * np.sin(theta))
 
-    x_star = (x + x_line) / 2 + mu * (y - y_line)
-    y_star = (y + y_line) / 2 + mu * (x_line - x)
-    
-    r_star = np.sqrt((x - x_star)**2 + (y - y_star)**2)
+        x_star = (x + x_line) / 2 + mu * (y - y_line)
+        y_star = (y + y_line) / 2 + mu * (x_line - x)
+        
+        r_star = np.sqrt((x - x_star)**2 + (y - y_star)**2)
 
-    delta_theta = np.arctan2(y_line - y_star, x_line - x_star) \
-        - np.arctan2(y - y_star, x - x_star)
-    v_hat = delta_theta / dt * r_star
-    w_hat = delta_theta / dt
-    gamma_hat = (theta_line - theta) / dt - w_hat
+        delta_theta = np.arctan2(y_line - y_star, x_line - x_star) \
+            - np.arctan2(y - y_star, x - x_star)
+        v_hat = delta_theta / dt * r_star
+        w_hat = delta_theta / dt
 
-    return prob(v - v_hat, 0.001)\
-        * prob(w - w_hat, 0.001)\
-        * prob(gamma_hat, 0.001)
+        return prob(v - v_hat, 0.001)\
+            * prob(w - w_hat, 0.001)
+    return 0
+
+
+def sample_motion_model_vel(ut, xtm1, dt):
+    v, w = ut
+    x, y, theta = xtm1
+
+    v_hat = v + sample(alphas[0]*v**2 + alphas[1]*w**2)
+    w_hat = w + sample(alphas[2]*v**2 + alphas[3]*w**2)
+    gamma_hat = sample(alphas[4]*v**2 + alphas[5]*w**2)
+
+    x_line = x - v_hat / w_hat * np.sin(theta) + v_hat / w_hat * np.sin(theta + w_hat * dt)
+    y_line = y + v_hat / w_hat * np.cos(theta) - v_hat / w_hat * np.cos(theta + w_hat * dt)
+    theta_line = theta + w_hat * dt + gamma_hat * dt
+
+    return [x_line, y_line, theta_line]
 
 
 def landmark_known_corr(ft, ct, xt, sigma_squared):
@@ -55,93 +71,290 @@ def landmark_known_corr(ft, ct, xt, sigma_squared):
         * prob(st - sc, sigma_squared)
     return q
 
-def grid_localization(p, ut, zt, Xt, dt):
-    
+
+def get_ft(ct, xt):
+    xc, yc, sc = ct
+    x, y, theta = xt
+    r = np.sqrt((xc - x)**2 + (yc - y)**2) + 0.01 * np.random.rand()
+    phi = np.arctan2(yc - y, xc - x) + 0.01 * np.random.rand()
+    return [r, phi, sc]
+
+
+def get_next_pos(mu_l: np.ndarray, ut: np.ndarray, dt: float) -> np.ndarray:
+    theta = mu_l[-1]
+    vt, wt = ut
+    mut = mu_l + np.array([
+        -vt / wt * np.sin(theta) + vt/wt * np.sin(theta + wt * dt),
+        vt / wt * np.cos(theta) - vt / wt * np.cos(theta + wt * dt),
+        wt * dt])
+    return mut
+
+
+def sample_p(p: np.ndarray, x: float):
+    """
+    Returns the index of a sample from the given distribution 
+    'p' given a single value 'x' between 0 and 1
+    """
+    pp = 0
+    for i, pi in enumerate(p):
+        if x < pp: return i
+        pp += pi
+    return p.shape[0] - 1
+
+
+def grid_localization(p, ut, ct, Xt, dt, nx):
+    """
+    Calculates the probability of the localization of
+    the robot in a grid
+    parameters:
+    p: the prior probability that the robot is at position
+        (x,y)
+    ut: control signal
+    ct: landmark
+    Xt: grid of possible positions
+    dt: time by which the robot moved
+    nx: the true position of the robot after moving (used
+        to make the landmark measurement)
+    """
     for k in range(len(Xt)):
-        for i in range(len(Xt)):
-            mv = motion_model_vel(Xt[k], ut, Xt[i], dt)
-            if np.isnan(mv) : continue
-            #print(mv)
-            p[k] += p[i] * mv
-        print(p[k])
+        p[k] = sum([p[i] * mv for i in range(len(Xt)) 
+            if not np.isnan((mv:=motion_model_vel(Xt[k], ut, Xt[i], dt)))])
+        
+        for c in ct:
+            ft = get_ft(c, nx)
+            p[k] = p[k] * landmark_known_corr(ft, c, Xt[k], 0.01)
+    p /= p.sum()
     return p
-        
-
-n = 50
-p = np.ones((n, n)) / n ** 2
-plt.imshow(p)
-
-Xt = np.array([(x, y, 0) for x in np.arange(0,n)
-    for y in np.arange(0,n)])
-p = grid_localization(p.reshape(-1,1), [1, 1], [], Xt, 5)
-print(p)
-# %%
-class localization():
-    """Performing Bayesian Updating to Produce a Distribution of Likely Positions in the Environment"""
-
-    def __init__(self, colours, measurements, motions, sensor_right, p_move):
-        self.world = colours
-        self.measurements = measurements
-        self.motions = motions
-        self.sensor_right = sensor_right
-        self.p_move = p_move
-
-        # Initialate Uniform Prior
-        pinit = 1.0 / float(len(colours)) / float(len(colours[0]))
-        self.p = [[pinit for row in range(len(colours[0]))] for col in range(len(colours))]
-
-    def sense(self, p, world, measurement):
-        """Compute probabilities after sensing the world (with some confidence)"""
-        q = [[0.0 for row in range(len(world[0]))] for col in range(len(world))]
-
-        s = 0.0
-        for i in range(len(p)):
-            for j in range(len(p[i])):
-                hit = (measurement == world[i][j])
-                q[i][j] = p[i][j] * (hit * self.sensor_right + (1-hit)*(1-self.sensor_right))
-                s += q[i][j]
-
-        # normalize
-        for i in range(len(q)):
-            for j in range(len(p[0])):
-                q[i][j] /= s
-
-        return q
 
 
-    def move(self, p, motion):
-        """Compute probabilities after moving through world (with some confidence)"""
-        q = [[0.0 for row in range(len(self.world[0]))] for col in range(len(self.world))]
+# shout-out to http://www.u.arizona.edu/~ximyu/stuff/slides/20090324_CS645_MonteCarloLocalization.pdf
+def MCL(Xtm1, ut, ct, dt, nx, n):
+    """
+    Monte Carlo localization
+    Xtm1: last particles positions
+    ut: control signal
+    ct: landmarks
+    dt: delta time
+    n: number of particles
+    nx: true next position
+    """
+    Xt = []
+    Xt_bar = []
+    W = [] # keep W and Xt separated for convenience 
+    for m in range(n):
+        xtm = sample_motion_model_vel(ut, Xtm1[m], dt)
+        w = reduce(
+            lambda x, y: x * y,
+            [landmark_known_corr(
+                get_ft(c, nx), c, xtm, 0.01)
+                for c in ct], 1.0)
+        Xt_bar.append(xtm)
+        W.append(w)
 
-        for i in range(len(p)):
-            for j in range(len(p[0])):
-                q[i][j] = (self.p_move * p[(i-motion[0]) % len(p)][(j-motion[1]) % len(p[i])]) + ((1-self.p_move) * p[i][j])
-        return q
+    # normalize weights
+    W = np.array(W)
+    W /= W.sum()
+    # generate particles
+    Xt = [Xt_bar[sample_p(W, np.random.rand())]
+        for m in range(n)]
+    return (Xt, W)
 
 
-    def compute_posterior(self):
-        """Call Computation"""
-        p = self.p
-        for i in range(len(self.measurements)):
-            p = self.move(p, self.motions[i])
-            p = self.sense(p, self.world, self.measurements[i])
 
-        return p
+def MCL_aug(Xtm1, ut, ct, dt, nx, n):
+    # static variables
+    if "w_slow" not in MCL_aug.__dict__:
+        MCL_aug.w_slow = .0
+        MCL_aug.w_fast = .0
+
+    alpha_s = 0.1
+    alpha_f = 0.99
+    Xt = []
+    Xt_bar = []
+    w_avg = 0
+    W = [] # keep W and Xt separated for convenience 
+    for m in range(n):
+        xtm = sample_motion_model_vel(ut, Xtm1[m], dt)
+        w = reduce(
+            lambda x, y: x * y,
+            [landmark_known_corr(
+                get_ft(c, nx), c, xtm, 0.01)
+                for c in ct], 1.0)
+        Xt_bar.append(xtm)
+        w_avg += w / n
+        W.append(w)
+
+    MCL_aug.w_slow += alpha_s * (w_avg - MCL_aug.w_slow)
+    MCL_aug.w_fast += alpha_f * (w_avg - MCL_aug.w_fast)
+
+    print(1.0 - MCL_aug.w_fast / MCL_aug.w_slow)
+    for _ in range(n):
+        W.append(
+            max(0, 
+            1.0 - MCL_aug.w_fast / MCL_aug.w_slow))
+        r = lambda: 2.0 * np.random.rand() - 1.0
+        Xt_bar.append([r(), r(), r()])
+
+    # normalize weights
+    W = np.array(W)
+    W /= W.sum()
+    # generate particles
+    Xt = [Xt_bar[sample_p(W, np.random.rand())]
+        for m in range(n)]
+    return Xt
 
 
-    def show(self, p):
-        rows = ['[' + ','.join(map(lambda x: '{0:.5f}'.format(x),r)) + ']' for r in p]
-        print('[' + ',\n '.join(rows) + ']')
-        
+def KLD_MCL(Xtm1, Wtm1, ut, ct, dt, nx, n, 
+        sigma, min_x, max_x):
+    """
+    Monte Carlo localization with KDL sampling
+    Xtm1: last particles positions
+    Wtm1: weights of last particles positions
+    ut: control signal
+    ct: landmarks
+    dt: delta time
+    n: number of particles
+    nx: true next position
+    sigma: standard deviation of something
+    min_x: minimum value of the map
+    max_x: maximum value of the map
+    """
+    Xt = []
+    W = []
+    M = 0
+    Mx = 0
+    k = 0
+    M_min = n // 10
 
-colours = [['R','G','G','R','R'],
-          ['R','R','G','R','R'],
-          ['R','R','G','G','R'],
-          ['R','R','R','R','R']]
-measurements = ['G','G','G','G','G']
-motions = [[0,0],[0,1],[1,0],[1,0],[0,1]]
+    bh = 5
+    H = np.zeros(int(n / bh))
+    while (M < Mx or M < M_min):
+        i = sample_p(Wtm1, np.random.rand())
+        xtm = sample_motion_model_vel(ut, Xtm1[i], dt)
+        w = reduce(
+            lambda x, y: x * y,
+            [landmark_known_corr(
+                get_ft(c, nx), c, xtm, 0.01)
+                for c in ct], 1.0)
+        Xt.append(xtm)
+        W.append(w)
 
-localization = localization(colours=colours, measurements=measurements, motions=motions, sensor_right=0.7, p_move=0.8)
-posterior = localization.compute_posterior()
-localization.show(posterior)
+        get_bin = lambda x: \
+            int(((x - min_x) * max_x / (max_x - min_x) * n) / bh)
+        if H[get_bin(xtm[0])] == 0:
+            k += 1
+            H[get_bin(xtm[0])] = 1
+            if k > 1:
+                Mx = (k - 1) / (2 * sigma) *\
+                    (1 - 2 / (9 * (k - 1))\
+                     + np.sqrt(2 / (9 * (k - 1))\
+                        # fuck it, delta is 0.25
+                        * 0.675 * sigma) 
+                     ) ** 3
+
+        M += 1
+    print(Mx)
+    return (Xt, np.array(W))
+
+
+
+# KLD_MCL
+nx = [0, 0, 0]
+dt = 0.5
+ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+n = 20
+Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+    for y in np.arange(0,n)]) / n - 1.0
+W = np.ones(Xt.shape[0])
+W /= W.sum()
+n = len(Xt)
+
+min_x = np.min(Xt)
+max_x = np.max(Xt)
+for i, ut in enumerate([[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]):
+    nx = get_next_pos(nx, ut, dt)
+    if i:
+        Xt, W = KLD_MCL(Xt, W, ut, ct, dt, nx, n, 0.05, -1, 1)
+        W /= W.sum()
+    else: # do normal MCL the first time through
+        Xt, W = MCL(Xt, ut, ct, dt, nx, n)
+        W /= W.sum()
+
+    figure, axis = plt.subplots(1, 2)
+    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+    print(nx, len(Xt))
+    plt.show()
+#%%
+# MCL
+nx = [0, 0, 0]
+dt = 0.5
+ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+n = 20
+Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+    for y in np.arange(0,n)]) / n - 1.0
+n = len(Xt)
+
+min_x = np.min(Xt)
+max_x = np.max(Xt)
+for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+    nx = get_next_pos(nx, ut, dt)
+    Xt, _ = MCL(Xt, ut, ct, dt, nx, n)
+
+    figure, axis = plt.subplots(1, 2)
+    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+    print(nx)
+    plt.show()
+
+#%%
+# MCL Augmented
+nx = [0, 0, 0]
+dt = 0.5
+ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+
+n = 20
+Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+    for y in np.arange(0,n)]) / n - 1.0
+n = len(Xt)
+
+min_x = np.min(Xt)
+max_x = np.max(Xt)
+for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+    nx = get_next_pos(nx, ut, dt)
+    Xt = MCL_aug(Xt, ut, ct, dt, nx, n)
+
+    figure, axis = plt.subplots(1, 2)
+    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+    print(nx)
+    plt.show()
+
+#%%
+# grid_localization
+nx = [0, 0, 0]
+ut = [-1., 1.]
+dt = 0.5
+
+n = 20
+ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+p = np.ones(n * n) / n ** 2
+Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+    for y in np.arange(0,n)]) / n - 1.0
+
+plt.imshow(p.reshape((n, n)), 
+    extent=[Xt.min(), Xt.max(), Xt.max(), Xt.min()])
+plt.show()
+
+for ut in [[1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+    nx = get_next_pos(nx, ut, dt)
+    p = grid_localization(p, ut, ct, Xt, dt, nx)
+    plt.imshow(p.reshape((n, n)), 
+        extent=[Xt.min(), Xt.max(), Xt.max(), Xt.min()])
+    print(nx)
+    plt.show()
+
+
+
+
 # %%
