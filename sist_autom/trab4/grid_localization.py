@@ -258,103 +258,101 @@ def KLD_MCL(Xtm1, Wtm1, ut, ct, dt, nx, n,
 
 
 
-# KLD_MCL
-nx = [0, 0, 0]
-dt = 0.5
-ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
-n = 20
-Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
-    for y in np.arange(0,n)]) / n - 1.0
-W = np.ones(Xt.shape[0])
-W /= W.sum()
-n = len(Xt)
+if __name__ == "__main__":
+    # KLD_MCL
+    nx = [0, 0, 0]
+    dt = 0.5
+    ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+    n = 20
+    Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+        for y in np.arange(0,n)]) / n - 1.0
+    W = np.ones(Xt.shape[0])
+    W /= W.sum()
+    n = len(Xt)
 
-min_x = np.min(Xt)
-max_x = np.max(Xt)
-for i, ut in enumerate([[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]):
-    nx = get_next_pos(nx, ut, dt)
-    if i:
-        Xt, W = KLD_MCL(Xt, W, ut, ct, dt, nx, n, 0.05, -1, 1)
-        W /= W.sum()
-    else: # do normal MCL the first time through
-        Xt, W = MCL(Xt, ut, ct, dt, nx, n)
-        W /= W.sum()
+    min_x = np.min(Xt)
+    max_x = np.max(Xt)
+    for i, ut in enumerate([[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]):
+        nx = get_next_pos(nx, ut, dt)
+        if i:
+            Xt, W = KLD_MCL(Xt, W, ut, ct, dt, nx, n, 0.05, -1, 1)
+            W /= W.sum()
+        else: # do normal MCL the first time through
+            Xt, W = MCL(Xt, ut, ct, dt, nx, n)
+            W /= W.sum()
 
-    figure, axis = plt.subplots(1, 2)
-    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
-    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
-    print(nx, len(Xt))
-    plt.show()
-#%%
-# MCL
-nx = [0, 0, 0]
-dt = 0.5
-ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
-n = 20
-Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
-    for y in np.arange(0,n)]) / n - 1.0
-n = len(Xt)
+        figure, axis = plt.subplots(1, 2)
+        axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+        axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+        print(nx, len(Xt))
+        plt.show()
+    #%%
+    # MCL
+    nx = [0, 0, 0]
+    dt = 0.5
+    ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+    n = 20
+    Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+        for y in np.arange(0,n)]) / n - 1.0
+    n = len(Xt)
 
-min_x = np.min(Xt)
-max_x = np.max(Xt)
-for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
-    nx = get_next_pos(nx, ut, dt)
-    Xt, _ = MCL(Xt, ut, ct, dt, nx, n)
+    min_x = np.min(Xt)
+    max_x = np.max(Xt)
+    for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+        nx = get_next_pos(nx, ut, dt)
+        Xt, _ = MCL(Xt, ut, ct, dt, nx, n)
 
-    figure, axis = plt.subplots(1, 2)
-    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
-    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
-    print(nx)
-    plt.show()
+        figure, axis = plt.subplots(1, 2)
+        axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+        axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+        print(nx)
+        plt.show()
 
-#%%
-# MCL Augmented
-nx = [0, 0, 0]
-dt = 0.5
-ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+    #%%
+    # MCL Augmented
+    nx = [0, 0, 0]
+    dt = 0.5
+    ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
 
-n = 20
-Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
-    for y in np.arange(0,n)]) / n - 1.0
-n = len(Xt)
+    n = 20
+    Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+        for y in np.arange(0,n)]) / n - 1.0
+    n = len(Xt)
 
-min_x = np.min(Xt)
-max_x = np.max(Xt)
-for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
-    nx = get_next_pos(nx, ut, dt)
-    Xt = MCL_aug(Xt, ut, ct, dt, nx, n)
+    min_x = np.min(Xt)
+    max_x = np.max(Xt)
+    for ut in [[-1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+        nx = get_next_pos(nx, ut, dt)
+        Xt = MCL_aug(Xt, ut, ct, dt, nx, n)
 
-    figure, axis = plt.subplots(1, 2)
-    axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
-    axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
-    print(nx)
-    plt.show()
+        figure, axis = plt.subplots(1, 2)
+        axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
+        axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
+        print(nx)
+        plt.show()
 
-#%%
-# grid_localization
-nx = [0, 0, 0]
-ut = [-1., 1.]
-dt = 0.5
+    #%%
+    # grid_localization
+    nx = [0, 0, 0]
+    ut = [-1., 1.]
+    dt = 0.5
 
-n = 20
-ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
-p = np.ones(n * n) / n ** 2
-Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
-    for y in np.arange(0,n)]) / n - 1.0
+    n = 20
+    ct = [[0.5, 0.5, 0], [0.7, 0.2, 0], [0.2, 0.6, 0]]
+    p = np.ones(n * n) / n ** 2
+    Xt = 2.0 * np.array([(x, y, 0) for x in np.arange(0,n)
+        for y in np.arange(0,n)]) / n - 1.0
 
-plt.imshow(p.reshape((n, n)), 
-    extent=[Xt.min(), Xt.max(), Xt.max(), Xt.min()])
-plt.show()
-
-for ut in [[1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
-    nx = get_next_pos(nx, ut, dt)
-    p = grid_localization(p, ut, ct, Xt, dt, nx)
     plt.imshow(p.reshape((n, n)), 
         extent=[Xt.min(), Xt.max(), Xt.max(), Xt.min()])
-    print(nx)
     plt.show()
 
-
-
+    for ut in [[1., 1.], [-0.5, -0.5], [-0.1, -0.2]]:
+        nx = get_next_pos(nx, ut, dt)
+        p = grid_localization(p, ut, ct, Xt, dt, nx)
+        plt.imshow(p.reshape((n, n)), 
+            extent=[Xt.min(), Xt.max(), Xt.max(), Xt.min()])
+        print(nx)
+        plt.show()
 
 # %%
