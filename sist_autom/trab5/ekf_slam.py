@@ -22,6 +22,7 @@ def animate(true_states, belief_states, markers, uncertanties, fov):
     fig = plt.figure()
 
     ax = plt.axes(xlim=world_bounds, ylim=world_bounds)
+    ax.set_title("EKF Slam")
     ax.set_aspect('equal')
     ax.plot(markers[0], markers[1], '+', color="k", label="Landmarks")
 
@@ -237,7 +238,7 @@ def efk_slam(mu: np.ndarray, sigma: np.ndarray, vt: float, wt: float,
 
 if __name__ == "__main__":
     # landmarks (x and y coordinates)
-    num_landmarks = 4
+    num_landmarks = 10
     world_markers = np.random.randint(low=world_bounds[0]+1, 
         high=world_bounds[1], size=(2,num_landmarks)).T
 
