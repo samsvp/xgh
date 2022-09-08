@@ -248,7 +248,7 @@ def KLD_MCL(Xtm1, Wtm1, ut, ct, dt, nx, n,
                 Mx = (k - 1) / (2 * sigma) *\
                     (1 - 2 / (9 * (k - 1))\
                      + np.sqrt(2 / (9 * (k - 1))\
-                        # fuck it, delta is 0.25
+                        # delta is 0.25
                         * 0.675 * sigma) 
                      ) ** 3
 

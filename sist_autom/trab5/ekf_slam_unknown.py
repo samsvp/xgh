@@ -22,6 +22,7 @@ def animate(true_states, belief_states, markers, uncertanties, fov):
     fig = plt.figure()
 
     ax = plt.axes(xlim=world_bounds, ylim=world_bounds)
+    ax.set_title("EKF Slam Unknown corr")
     ax.set_aspect('equal')
     ax.plot(markers[0], markers[1], '+', color="k", label="Landmarks")
 
@@ -189,42 +190,63 @@ def efk_slam(mu: np.ndarray, sigma: np.ndarray, vt: float, wt: float,
         if np.abs(wrap(z_true[1,0])) > perception_bound:
             continue
 
-        lm_idx = 3 + (2*j) # where we index the mu vector for the j'th landmark
+        pi_k = np.inf
+        H_t = None
+        phi_k = None
+        z_hat = None
 
         if not seen_landmark[j]:
             r = z_true[0,0]
             bearing = z_true[1,0]
+            lm_idx = 3 + (2*j)
             mu_bar[lm_idx, 0] = bel_x + (r * np.cos(bearing + bel_theta))     # lm_x_bar
             mu_bar[lm_idx + 1, 0] = bel_y + (r * np.sin(bearing + bel_theta)) # lm_y_bar
             
             seen_landmark[j] = True
 
-        # diff_x, diff_y
-        delta_x = mu_bar[lm_idx, 0] - bel_x
-        delta_y = mu_bar[lm_idx + 1, 0] - bel_y
-        
-        q = delta_x ** 2 + delta_y ** 2
+        for k in range(cts.shape[0]):
+            #if j != k: continue
 
-        z_hat = np.array([
-            [np.sqrt(q)],
-            [np.arctan2(delta_y, delta_x) - bel_theta]
-        ])
-        
-        F_x_j = np.zeros((5, pose_map_size))
-        F_x_j[0:3,0:3] = np.identity(3)
-        F_x_j[3:,lm_idx:lm_idx+2] = np.identity(2)
+            lm_idx = 3 + (2*k) # where we index the mu vector for the j'th landmark
 
-        sqrt_q = np.sqrt(q)
-        x_sqrt = sqrt_q * delta_x
-        y_sqrt = sqrt_q * delta_y
-        dh = np.array([
-            [-x_sqrt, -y_sqrt, 0, x_sqrt, y_sqrt],
-            [delta_y, -delta_x, -q, -delta_y, delta_x]
-        ])
-        H_t = (1 / q) * dh @ F_x_j
+            if not seen_landmark[k]:
+                continue
+            
+            # diff_x, diff_y
+            delta_x = mu_bar[lm_idx, 0] - bel_x
+            delta_y = mu_bar[lm_idx + 1, 0] - bel_y
+            
+            q = delta_x ** 2 + delta_y ** 2
 
-        S_t = H_t @ sigma_bar @ H_t.T + Qt
-        K_t = sigma_bar @ H_t.T @ np.linalg.pinv(S_t)
+            _z_hat = np.array([
+                [np.sqrt(q)],
+                [np.arctan2(delta_y, delta_x) - bel_theta]
+            ])
+            
+            F_x_j = np.zeros((5, pose_map_size))
+            F_x_j[0:3,0:3] = np.identity(3)
+            F_x_j[3:,lm_idx:lm_idx+2] = np.identity(2)
+
+            sqrt_q = np.sqrt(q)
+            x_sqrt = sqrt_q * delta_x
+            y_sqrt = sqrt_q * delta_y
+            dh = np.array([
+                [-x_sqrt, -y_sqrt, 0, x_sqrt, y_sqrt],
+                [delta_y, -delta_x, -q, -delta_y, delta_x]
+            ])
+            _H_t = (1 / q) * dh @ F_x_j
+
+            _phi_k = _H_t @ sigma_bar @ _H_t.T + Qt
+            _pi_k = (z_true - _z_hat).T @ np.linalg.pinv(_phi_k) @ (z_true - _z_hat)
+            _pi_k = _pi_k[0][0]
+            if _pi_k < pi_k:
+                pi_k = _pi_k
+                H_t = _H_t
+                phi_k = _phi_k
+                z_hat = _z_hat
+
+
+        K_t = sigma_bar @ H_t.T @ np.linalg.pinv(phi_k)
         
         z_diff = z_true - z_hat
         z_diff[1,0] = wrap(z_diff[1,0])
@@ -237,7 +259,10 @@ def efk_slam(mu: np.ndarray, sigma: np.ndarray, vt: float, wt: float,
 
 if __name__ == "__main__":
     # landmarks (x and y coordinates)
-    num_landmarks = 4
+    # np.random.seed(1) # robot gets lost
+    np.random.seed(0)
+
+    num_landmarks = 10
     world_markers = np.random.randint(low=world_bounds[0]+1, 
         high=world_bounds[1], size=(2,num_landmarks)).T
 
@@ -248,7 +273,7 @@ if __name__ == "__main__":
     # pose (x,y,theta) and landmarks (x,y)
     pose_map_size = 3 + (2*num_landmarks)
 
-    dt = .1
+    dt = .1 
     total_time = 75 # seconds
     t = np.arange(0, total_time+dt, dt).reshape(1, -1)
 
