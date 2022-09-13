@@ -286,6 +286,9 @@ if __name__ == "__main__":
         axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
         print(nx, len(Xt))
         plt.show()
+        plt.scatter([x[0] + 0.01 * np.random.randn() for x in Xt], [x[1] + 0.01 * np.random.randn() for x in Xt])
+        plt.show()
+
     #%%
     # MCL
     nx = [0, 0, 0]
@@ -307,6 +310,9 @@ if __name__ == "__main__":
         axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
         print(nx)
         plt.show()
+        plt.scatter([x[0] + 0.01 * np.random.randn() for x in Xt], [x[1] + 0.01 * np.random.randn() for x in Xt])
+        plt.show()
+
 
     #%%
     # MCL Augmented
@@ -329,6 +335,8 @@ if __name__ == "__main__":
         axis[0].hist([x[0] for x in Xt], range=[min_x, max_x], bins=50)
         axis[1].hist([x[1] for x in Xt], range=[min_x, max_x], bins=50)
         print(nx)
+        plt.show()
+        plt.scatter([x[0] + 0.01 * np.random.randn() for x in Xt], [x[1] + 0.01 * np.random.randn() for x in Xt])
         plt.show()
 
     #%%
