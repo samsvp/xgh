@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from scipy.linalg import sqrtm
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.patches import Wedge
@@ -32,6 +33,9 @@ def animate(true_states, pose_particles, markers, lm_pred_uncertainty,
     ax.set_title("Fast Slam")
     ax.set_aspect('equal')
     ax.plot(markers[0], markers[1], '+', color="k", label="Landmarks")
+
+    for i in range(len(markers[0])):
+        ax.text(markers[0][i], markers[1][i], str(i))
 
     actual_path, = ax.plot([], [], color='b', label="True")
     pred_path, = ax.plot([], [], color='r', label="Predicted")
@@ -255,30 +259,57 @@ def fast_slam(chi_bar_t: np.ndarray, particle_poses: np.ndarray,
 
                 # default importance weight
                 weight *= p0
-
             else:
-                # measurement prediction
-                lm_x_bar = ldm_loc_est_x[lm_i,k]
-                lm_y_bar = ldm_loc_est_y[lm_i,k]
+                min_wj = np.inf
+                lm_x_bar = -1
+                lm_y_bar = -1
+                z_hat = None
+                Q_t = None
+                prev_sig = None
+                H_t = None
+                min_l = 0
+                for l in range(landmarks.shape[1]):
+                    # measurement prediction
+                    _lm_x_bar = ldm_loc_est_x[l,k]
+                    _lm_y_bar = ldm_loc_est_y[l,k]
 
-                diff_x = lm_x_bar - bel_x
-                diff_y = lm_y_bar - bel_y
-                q = (diff_x * diff_x) + (diff_y * diff_y)
-                r = np.sqrt(q)
-                bearing = np.arctan2(diff_y,diff_x) - bel_theta
-                z_hat = np.array([[r], [bearing]])
+                    diff_x = _lm_x_bar - bel_x
+                    diff_y = _lm_y_bar - bel_y
 
-                # calculate jacobian
-                H_t = np.array([
-                    [r*diff_x, r*diff_y],
-                    [-diff_y, diff_x]
-                ]) / r ** 2
+                    q = (diff_x * diff_x) + (diff_y * diff_y)
+                    r = np.sqrt(q)
+                    bearing = np.arctan2(diff_y,diff_x) - bel_theta
+                    _z_hat = np.array([[r], [bearing]])
 
-                # measurement covariance
-                lm_sig_i = 2*lm_i
-                p_sig_i = 2*k
-                prev_sig = ldm_unc[lm_sig_i:lm_sig_i+2 , p_sig_i:p_sig_i+2]
-                Q_t = H_t @ prev_sig @ H_t.T + Qt
+                    # calculate jacobian
+                    _H_t = np.array([
+                        [r*diff_x, r*diff_y],
+                        [-diff_y, diff_x]
+                    ]) / r ** 2
+
+                    # measurement covariance
+                    _lm_sig_i = 2*l
+                    _p_sig_i = 2*k
+                    _prev_sig = ldm_unc[_lm_sig_i:_lm_sig_i+2 , _p_sig_i:_p_sig_i+2]
+                    _Q_t = _H_t @ _prev_sig @ _H_t.T + Qt
+
+                    wj = np.log(np.linalg.det(2 * np.pi * _Q_t) ** -.5) \
+                        + ((z_true - _z_hat).T @ np.linalg.inv(_Q_t) @ (z_true - _z_hat))[0][0]
+                    
+
+                    if wj < min_wj:
+                        min_l = l
+                        min_wj = wj
+                        lm_x_bar = _lm_x_bar
+                        lm_y_bar = _lm_y_bar
+                        z_hat = _z_hat
+                        Q_t = _Q_t
+                        prev_sig = _prev_sig
+                        lm_sig_i = _lm_sig_i
+                        p_sig_i = _p_sig_i
+                        H_t = _H_t
+
+                if min_l != lm_i: print(lm_i, min_l, wj)
 
                 # calculate kalman gain
                 K_t = prev_sig @ H_t.T @ np.linalg.pinv(Q_t)
@@ -315,14 +346,14 @@ if __name__ == "__main__":
     total_time = 30 # seconds
     t = np.arange(0, total_time+dt, dt)
 
-    np.random.seed(None)
+    np.random.seed(100)
 
     # std deviation of range and bearing sensor noise for each landmark
     std_dev_range = .1
     std_dev_bearing = .05
     
     # number of landmarks
-    n_ldm = 10
+    n_ldm = 6
     landmarks = np.random.randint(low=world_bounds[0]+1, 
         high=world_bounds[1], size=(2,n_ldm))
     lm_x = landmarks[0,:]
@@ -401,8 +432,8 @@ if __name__ == "__main__":
         chi_bar_t = np.zeros((p_poses.shape[0]+1,p_poses.shape[1]))
 
         chi_bar_t = fast_slam(chi_bar_t, p_poses[...,ts-1], v_c[ts], w_c[ts], 
-            [x_pos_true[ts], y_pos_true[ts], theta_true[ts]], alphas, 
-            seen_lm, dt)
+            [x_pos_true[ts], y_pos_true[ts], theta_true[ts]],
+            alphas, seen_lm, dt)
 
         # resample, factoring in the weights
         p_poses[:,:,ts], ldm_loc_est_x, ldm_loc_est_y, ldm_unc = sample_particles(
