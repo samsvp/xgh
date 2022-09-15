@@ -14,7 +14,7 @@ world_bounds = [-20, 20]
 
 def animate(true_states, belief_states, markers, uncertanties, fov):
     x_tr, y_tr, th_tr = true_states
-    x_bl, y_bl, th_bl = belief_states[:3, :]
+    mu_x, mu_y, mu_theta = belief_states[:3, :]
     fov_bound = np.deg2rad(fov)/2
     
     radius = .5
@@ -32,7 +32,7 @@ def animate(true_states, belief_states, markers, uncertanties, fov):
     pred_heading, = ax.plot([], [], color="k")
 
     robot = plt.Circle((x_tr[0], y_tr[0]), radius=radius, color=(0, 0, 1, .5), ec="k")
-    pred_robot = plt.Circle((x_bl[0], y_bl[0]), radius=radius, color=(1, 0, 0, .5), ec="k")
+    pred_robot = plt.Circle((mu_x[0], mu_y[0]), radius=radius, color=(1, 0, 0, .5), ec="k")
     
     ax.add_artist(robot)
     ax.add_artist(pred_robot)
@@ -80,11 +80,11 @@ def animate(true_states, belief_states, markers, uncertanties, fov):
 
         heading.set_data([x_tr[i], x_tr[i] + radius * np.cos(th_tr[i])], 
             [y_tr[i], y_tr[i] + radius * np.sin(th_tr[i])])
-        pred_heading.set_data([x_bl[i], x_bl[i] + radius * np.cos(th_bl[i])], 
-            [y_bl[i], y_bl[i] + radius * np.sin(th_bl[i])])
+        pred_heading.set_data([mu_x[i], mu_x[i] + radius * np.cos(mu_theta[i])], 
+            [mu_y[i], mu_y[i] + radius * np.sin(mu_theta[i])])
         
         robot.center = (x_tr[i], y_tr[i])
-        pred_robot.center = (x_bl[i], y_bl[i])
+        pred_robot.center = (mu_x[i], mu_y[i])
         
         vision_beam.set_center((x_tr[i],y_tr[i]))
         vision_beam.theta1 = np.rad2deg(th_tr[i] - fov_bound)
@@ -142,7 +142,6 @@ def get_mu_bar(mu: np.ndarray, vt: float, wt: float,
 
 
 def wrap(angle: float) -> float:
-    # map angle between -pi and pi
     return (angle + np.pi) % (2 * np.pi) - np.pi
 
 
@@ -239,7 +238,7 @@ def efk_slam(mu: np.ndarray, sigma: np.ndarray, vt: float, wt: float,
 if __name__ == "__main__":
     # landmarks (x and y coordinates)
     num_landmarks = 10
-    world_markers = np.random.randint(low=world_bounds[0]+1, 
+    landmarks = np.random.randint(low=world_bounds[0]+1, 
         high=world_bounds[1], size=(2,num_landmarks)).T
 
     seen_landmark = {}
@@ -330,7 +329,7 @@ if __name__ == "__main__":
 
         # update belief/uncertainty
         mu, sigma = efk_slam(mu, sigma, vt, wt, [real_x, real_y, real_theta],
-            world_markers, dt, Fx, alphas, Qt)
+            landmarks, dt, Fx, alphas, Qt)
 
         combined_state_vecs[:,i] = mu[:,0]
         all_sigmas[:,:,i] = sigma
@@ -342,6 +341,6 @@ if __name__ == "__main__":
     t = t.tolist()[0]
 
     animate((x_pos_true, y_pos_true, theta_true), combined_state_vecs, 
-        (world_markers[:, 0], world_markers[:, 1] ), all_sigmas, FOV)
+        (landmarks[:, 0], landmarks[:, 1] ), all_sigmas, FOV)
 
 # %%
