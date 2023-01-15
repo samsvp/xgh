@@ -1,8 +1,33 @@
 const typeToFuncMap = {
     "text": "textComp",
     "number": "numericalComp",
-    "date": "dateComp"
+    "date": "dateComp",
+    "select": ""
 };
+
+
+function selectSearch(inputId, tableId, targetIdx) {
+    let selectedValue = document.getElementById(inputId).value.toUpperCase();
+    let table = document.getElementById(tableId);
+    let trs = table.getElementsByTagName('tr');
+    let classSelector = `__${tableId}input${targetIdx}`;
+    
+    selectedValue = selectedValue == "ALL" ? "" : selectedValue;
+
+    // do the search
+    [...trs].slice(2).forEach(tr => {
+        td = tr.getElementsByTagName("td")[targetIdx];
+        let value = td.textContent || td.innerText;
+        
+        if (!textComp(value, selectedValue)) {
+            tr.classList.add(classSelector);
+        } else {
+            tr.classList.remove(classSelector);
+        }
+
+        tr.style.display = tr.classList.length == 0 ? "" : "none";
+    });
+}
 
 
 function search(inputId, tableId, targetIdx, searchComp) {
@@ -12,11 +37,21 @@ function search(inputId, tableId, targetIdx, searchComp) {
     let table = document.getElementById(tableId);
     let trs = table.getElementsByTagName('tr');
 
+    let classSelector = `__${tableId}input${targetIdx}`;
+    
+
     // do the search
     [...trs].slice(2).forEach(tr => {
         td = tr.getElementsByTagName("td")[targetIdx];
         let value = td.textContent || td.innerText;
-        tr.style.display = searchComp(value, filter) ? "" : "none";
+
+        if (!searchComp(value, filter)) {
+            tr.classList.add(classSelector);
+        } else {
+            tr.classList.remove(classSelector);
+        }
+        
+        tr.style.display = tr.classList.length == 0 ? "" : "none";
     });
 }
 
@@ -84,7 +119,7 @@ function numericalComp(value, _filter) {
 function dateComp(_value, filter) {
     if (!filter) return textComp(_value, "");
 
-    
+
     let value = new Date(_value);
     value = String(value.getTime());
 
@@ -107,10 +142,9 @@ function dateComp(_value, filter) {
     let date = new Date(filter.slice(startIdx));
     datefilter += String(date.getTime());
 
-    console.log("filter", datefilter);
-    console.log("value", value);
     return numericalComp(value, datefilter);
 }
+
 
 
 // sorting
@@ -131,15 +165,35 @@ function addTableSearch(tableId, config={}) {
         let thName = ths[i].innerText;
         let cell = row.insertCell(i);
 
+        let type = "";
         let funcName = "textComp";
         if (config.hasOwnProperty("type") && (
             config.type.hasOwnProperty(i) || config.type.hasOwnProperty(thName)) ) { 
-                funcName = typeToFuncMap[config.type[i] || config.type[thName]];
+                type = config.type[i] || config.type[thName]
+                funcName = typeToFuncMap[type];
         }
-        cell.innerHTML = `<input type="text" id="myInput${i}" 
-            onkeyup="search('myInput${i}', '${tableId}', ${i}, ${funcName})"
-            placeholder="Search"
-            style="width: 80%">`;
+
+        if (type != "select") {
+            cell.innerHTML = `<input type="text" id="myInput${i}" 
+                onkeyup="search('myInput${i}', '${tableId}', ${i}, ${funcName})"
+                placeholder="Search"
+                style="width: 80%">`;
+        } else {
+            let trs = table.getElementsByTagName('tr');
+            let innerHTML = `<select name="${thName}" id="myInput${i}" 
+                                onchange="selectSearch('myInput${i}', '${tableId}', ${i})">`;
+            innerHTML += `<option value="All">All</option>`;
+            [...trs]
+                    .slice(2)
+                    .map(tr => {
+                        let td = tr.getElementsByTagName("td")[i];
+                        return td.textContent || td.innerText;
+                    })
+                    .filter((v, i, a) => a.indexOf(v) === i)
+                    .forEach(v => {innerHTML += `<option value="${v}">${v}</option>`});
+            innerHTML += `</select>`;
+            cell.innerHTML = innerHTML;
+        }
     }
 
     table.querySelectorAll('th').forEach(th => th.addEventListener('click', (() => {
