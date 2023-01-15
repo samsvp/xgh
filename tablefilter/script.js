@@ -11,7 +11,7 @@ function selectSearch(inputId, tableId, targetIdx) {
     let table = document.getElementById(tableId);
     let trs = table.getElementsByTagName('tr');
     let classSelector = `__${tableId}input${targetIdx}`;
-    
+
     selectedValue = selectedValue == "ALL" ? "" : selectedValue;
 
     // do the search
@@ -155,6 +155,30 @@ const comparer = (idx, asc) => (a, b) => ((v1, v2) =>
 )(getCellValue(asc ? a : b, idx), getCellValue(asc ? b : a, idx));
 
 
+
+/**
+ * Adds a column wise filter into the given table
+ * 
+ * Example:
+ *      Given a table with id "demo", with the table headers "Age", "Height", Weight, 
+ *      "Birthday", "Color" and more, then add the following code
+ * 
+        let config = {
+            type: {
+                "Age": "number",
+                "Height": "number",
+                "Weight": "number",
+                "Birthday": "date",
+                "Color": "select"
+            }
+        }
+        addTableSearch('demo', config);
+ *      
+ *      A search bar will appear to filter each column
+ *
+ * @param {String} tableId: the id of the table to add the search into 
+ * @param {Object} config: a config object to control the search
+ */
 
 function addTableSearch(tableId, config={}) {
     const table = document.getElementById(tableId);
