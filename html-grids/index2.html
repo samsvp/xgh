@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<link href="https://gridstackjs.com/node_modules/gridstack/dist/gridstack.min.css" rel="stylesheet"/>    
+<script src="https://gridstackjs.com/node_modules/gridstack/dist/gridstack-all.js"></script>
+
+<style>
+
+.grid-stack-item-content {
+    color: #2c3e50;
+    text-align: center;
+    background-color: #18bc9c;
+}
+
+</style>
+
+</head>
+<body style="background-color: #1a1a1a; color: white;">
+
+    <div class="grid-stack">
+        <div class="grid-stack-item">
+          <div class="grid-stack-item-content">Item 1</div>
+        </div>
+        <div class="grid-stack-item" gs-w="2">
+          <div class="grid-stack-item-content">Item 2 wider</div>
+        </div>
+    </div>
+
+
+    <script>
+        GridStack.init();
+    </script>
+
+</body>
+</html>

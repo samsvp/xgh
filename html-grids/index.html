@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0; padding: 0;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  height: 80%;
+}
+
+.grid-item {
+  background-color: rgba(107, 107, 107, 0.8);
+  text-align: center;
+  padding: 20px;
+  font-size: 30px;
+}
+
+.item1 {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+}
+
+.item2 {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.item5 {
+  grid-column: 1 / span 3;
+  grid-row: 3;
+}
+</style>
+</head>
+<body style="background-color: #1a1a1a; color: white;">
+
+<h1>A Five Items Grid Layout</h1>
+
+<div class="grid-container">
+  <div class="grid-item item1">1</div>
+  <div class="grid-item item2">2</div>
+  <div class="grid-item item3">3</div>  
+  <div class="grid-item item4">4</div>
+  <div class="grid-item item5">5</div>
+</div>
+
+<p>Direct child elements(s) of the grid container automatically becomes grid items.</p>
+
+<p>Item 1, 2, and 5 are set to span multiple columns or rows.</p>
+
+</body>
+</html>

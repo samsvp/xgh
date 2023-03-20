@@ -20,37 +20,28 @@ def rpy_to_quaternion(roll, pitch, yaw):
         cr * cp * sy - sr * sp * cy]).T
 
 #%%
-df = pd.read_csv("flights.csv")
+df = pd.read_csv("m600_flight_ariel.csv")
 
 corr = df.corr()
 corr.style.background_gradient(cmap='coolwarm')
 
-dataset = df.iloc[:, 2:-6].dropna()
+dataset = df.iloc[:, 2:].dropna()
 
 train_dataset = dataset.sample(frac=0.8,random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
 
-train_labels = train_dataset['wind_angle']
-test_labels = test_dataset['wind_angle']
+train_labels = train_dataset['wind_speed_y']
+test_labels = test_dataset['wind_speed_y']
 
-train_dataset = train_dataset.iloc[:, 5:]
-test_dataset = test_dataset.iloc[:, 5:]
+train_dataset = train_dataset.iloc[:,:-2]
+test_dataset = test_dataset.iloc[:,:-2]
 
 train_stats = train_dataset.describe()
 train_stats = train_stats.transpose()
 
-
 normed_train_data = norm(train_dataset, train_stats)
 normed_test_data = norm(test_dataset, train_stats)
 
-train_labels = np.array(
-    [np.cos(np.deg2rad(train_labels)),
-     np.sin(np.deg2rad(train_labels))]).T
-
-
-test_labels = np.array(
-    [np.cos(np.deg2rad(test_labels)), 
-     np.sin(np.deg2rad(test_labels))]).T
 
 # %%
 dataset = pd.read_csv("flights_new.csv")
@@ -107,7 +98,7 @@ regr.fit(normed_train_data, train_labels)
 regr.score(normed_test_data, test_labels)
 # %%
 from sklearn.neural_network import MLPRegressor
-regr_nn = MLPRegressor(random_state=1)
+regr_nn = MLPRegressor(random_state=1, max_iter=1000)
 regr_nn.fit(normed_train_data, train_labels)
 regr_nn.score(normed_test_data, test_labels)
 
@@ -130,8 +121,19 @@ import matplotlib.pyplot as plt
 y = regr.predict(normed_test_data)
 plt.plot(test_labels.tolist())
 plt.plot(y)
+plt.show()
+plt.plot(test_labels - y)
+plt.show()
+
 # %%
 y = regr_nn.predict(normed_test_data)
 plt.plot(test_labels.tolist())
 plt.plot(y)
+plt.show()
+# %%
+
+y = regr_br.predict(normed_test_data)
+plt.plot(test_labels - y)
+plt.title("Error Bayesian Ridge")
+plt.show()
 # %%

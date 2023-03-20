@@ -89,9 +89,12 @@ def get_prices(soup: BeautifulSoup) -> Tuple[float, float]:
     product_data = get_product_data(soup, "price")
     if product_data:
         _price = utils.find_by_key(product_data, "price").__next__()
-        price = float(_price)
-        list_price = price
-    
+        try:
+            price = float(_price)
+            list_price = price
+        except Exception as e:
+            print(e, _price)
+
     return price, list_price
 
 

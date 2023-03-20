@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Horizontal Card List</title>
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .card {
+            flex: 0 0 auto;
+            width: 200px;
+            margin-right: 10px;
+            background-color: #444;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease-out;
+        }
+
+        .card:hover,
+        .card:focus {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .card img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            margin: 0 0 5px;
+        }
+
+        .card p {
+            font-size: 14px;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="card-container">
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+    </div>
+
+    <div class="container" id="card-container">
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+        <div class="card" tabindex="0">
+            <img src="https://via.placeholder.com/200x300" alt="Movie Poster">
+            <h3>Movie Title</h3>
+            <p>Movie Description</p>
+        </div>
+    </div>
+
+    <script>
+        // Get all the cards in the card list
+        const containers = document.querySelectorAll('.container');
+        const allCards = [...containers].map(container => {
+            return {
+                index: 0,
+                cards: container.querySelectorAll('.card'),
+                currentCard: function () { return this.cards[this.index] },
+                length: function () { return this.cards.length },
+                forward: function () {
+                    if (++this.index > this.cards.length - 1) this.index = 0;
+                },
+                backward: function () {
+                    if (--this.index < 0) this.index = this.cards.length - 1;
+                }
+            }
+        });
+
+        // Set focus on the first card
+        let cards = allCards[0];
+        cards.currentCard().focus();
+
+        // Index of current container
+        let currentContainerIndex = 0;
+
+        // Add a keydown event listener to the document object
+        document.addEventListener('keydown', event => {
+            if (event.key === 'ArrowRight') {
+                cards.forward();
+            } else if (event.key === 'ArrowLeft') {
+                cards.backward()
+            } else if (event.key === "ArrowDown") {
+                if (++currentContainerIndex > allCards.length - 1) {
+                    currentContainerIndex = 0;
+                }
+                cards = allCards[currentContainerIndex];
+            } else if (event.key === "ArrowUp") {
+                if (--currentContainerIndex < 0) {
+                    currentContainerIndex = allCards.length - 1;
+                }
+                cards = allCards[currentContainerIndex];
+            }
+            cards.currentCard().focus();
+            // Scroll the page to the top of the div
+            cards.currentCard().scrollIntoView();
+        });
+    </script>
+</body>
+
+</html>
